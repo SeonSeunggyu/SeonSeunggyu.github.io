@@ -105,12 +105,12 @@
         // ⬆️ 여기까지 수정 가능
 
         const questionElement = document.getElementById("question");
-        const imageElement = document.getElementById("quiz-image");
         const answerButtons = document.getElementById("answer-buttons");
         const quizScreen = document.getElementById("quiz");
         const resultScreen = document.getElementById("result");
         const scoreElement = document.getElementById("score");
         const messageElement = document.getElementById("message");
+        const imageElement = document.getElementById("quiz-image");
 
         let currentQuestionIndex = 0;
         let score = 0;
@@ -124,13 +124,14 @@
         function showQuestion() {
             resetState();
             let currentQuestion = questions[currentQuestionIndex];
-            questionElement.innerText = currentQuestion.question;
-            if (currentQuestion.img) {
+             if (currentQuestion.img) {
         imageElement.src = currentQuestion.img;  
         imageElement.style.display = "block";    
     } else {
         imageElement.style.display = "none";     
     }
+            questionElement.innerText = currentQuestion.question;
+           
 
             currentQuestion.answers.forEach(answer => {
                 const button = document.createElement("button");
