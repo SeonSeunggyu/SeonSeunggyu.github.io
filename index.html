@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>나만의 퀴즈 만들기</title>
     <style>
+        #quiz-image {
+    max-width: 100%;      
+    height: auto;          
+    max-height: 300px;     
+    margin-bottom: 20px;   
+    border-radius: 10px;  
+    display: none;        
+}
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background-color: #f0f2f5;
@@ -67,6 +75,7 @@
         const questions = [
             {
                 question: "1. 대한민국의 수도는 어디일까요?",
+                img: "f.jpg",
                 answers: [
                     { text: "부산", correct: false },
                     { text: "서울", correct: true },
@@ -96,6 +105,7 @@
         // ⬆️ 여기까지 수정 가능
 
         const questionElement = document.getElementById("question");
+        const imageElement = document.getElementById("quiz-image");
         const answerButtons = document.getElementById("answer-buttons");
         const quizScreen = document.getElementById("quiz");
         const resultScreen = document.getElementById("result");
@@ -115,6 +125,12 @@
             resetState();
             let currentQuestion = questions[currentQuestionIndex];
             questionElement.innerText = currentQuestion.question;
+            if (currentQuestion.img) {
+        imageElement.src = currentQuestion.img;  
+        imageElement.style.display = "block";    
+    } else {
+        imageElement.style.display = "none";     
+    }
 
             currentQuestion.answers.forEach(answer => {
                 const button = document.createElement("button");
