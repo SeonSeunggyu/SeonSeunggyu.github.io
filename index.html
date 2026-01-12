@@ -9,3 +9,165 @@
     git pages 입니다.
   </body>
 </html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 퀴즈 만들기</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 20px; color: #333; }
+        .question { font-size: 1.2rem; margin-bottom: 20px; font-weight: bold; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        .btn:hover { background-color: #0056b3; }
+        #result { display: none; }
+        .score-text { font-size: 1.5rem; color: #28a745; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div id="quiz">
+            <h1>재미있는 퀴즈!</h1>
+            <div id="question" class="question">질문이 여기에 나옵니다.</div>
+            <div id="answer-buttons">
+                </div>
+        </div>
+
+        <div id="result">
+            <h1>결과 발표</h1>
+            <p class="score-text" id="score">0 / 0</p>
+            <p id="message">수고하셨습니다!</p>
+            <button class="btn" onclick="location.reload()">다시 도전하기</button>
+        </div>
+    </div>
+
+    <script>
+        // ⬇️ 여기에 퀴즈 내용을 수정하세요!
+        const questions = [
+            {
+                question: "1. 대한민국의 수도는 어디일까요?",
+                answers: [
+                    { text: "부산", correct: false },
+                    { text: "서울", correct: true },
+                    { text: "제주", correct: false },
+                    { text: "인천", correct: false }
+                ]
+            },
+            {
+                question: "2. 1 + 1 은?",
+                answers: [
+                    { text: "1", correct: false },
+                    { text: "2", correct: true },
+                    { text: "3", correct: false },
+                    { text: "4", correct: false }
+                ]
+            },
+            {
+                question: "3. 깃허브(GitHub)의 마스코트 동물은?",
+                answers: [
+                    { text: "고양이(옥토캣)", correct: true },
+                    { text: "강아지", correct: false },
+                    { text: "펭귄", correct: false },
+                    { text: "사자", correct: false }
+                ]
+            }
+        ];
+        // ⬆️ 여기까지 수정 가능
+
+        const questionElement = document.getElementById("question");
+        const answerButtons = document.getElementById("answer-buttons");
+        const quizScreen = document.getElementById("quiz");
+        const resultScreen = document.getElementById("result");
+        const scoreElement = document.getElementById("score");
+        const messageElement = document.getElementById("message");
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            resetState();
+            let currentQuestion = questions[currentQuestionIndex];
+            questionElement.innerText = currentQuestion.question;
+
+            currentQuestion.answers.forEach(answer => {
+                const button = document.createElement("button");
+                button.innerText = answer.text;
+                button.classList.add("btn");
+                button.addEventListener("click", () => selectAnswer(answer));
+                answerButtons.appendChild(button);
+            });
+        }
+
+        function resetState() {
+            while (answerButtons.firstChild) {
+                answerButtons.removeChild(answerButtons.firstChild);
+            }
+        }
+
+        function selectAnswer(answer) {
+            if (answer.correct) {
+                score++;
+            }
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showScore();
+            }
+        }
+
+        function showScore() {
+            quizScreen.style.display = "none";
+            resultScreen.style.display = "block";
+            scoreElement.innerText = `${score}점 / ${questions.length}문제`;
+            
+            if (score === questions.length) {
+                messageElement.innerText = "대단해요! 만점입니다! 🎉";
+            } else if (score >= questions.length / 2) {
+                messageElement.innerText = "참 잘했어요! 👍";
+            } else {
+                messageElement.innerText = "조금 더 분발해보세요! 😅";
+            }
+        }
+
+        startQuiz();
+    </script>
+</body>
+</html>
