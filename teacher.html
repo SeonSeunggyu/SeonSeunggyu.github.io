@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>교사용 감정 기록</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <style>
+    /* === 학생용 웹앱과 동일한 UI CSS === */
+    body { background: #f5f7fb; font-family: 'Apple SD Gothic Neo', sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+    h1, h2, h3 { text-align: center; }
+    .box, #teacherView { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    input, textarea, select { width: 100%; padding: 8px; margin-top: 6px; border-radius: 10px; border: 1px solid #ddd; }
+    button { padding: 10px 16px; margin-top: 10px; background: #4f7cff; color: white; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
+    button:hover { background: #3d66d6; }
+    .alert { background:#ffe0e0; padding:10px; margin:10px 0; border:1px solid #ff8080; border-radius:12px; font-weight:bold; }
+    .record { background: #fafafa; border-radius: 8px; margin-bottom: 6px; padding: 8px; border-bottom:1px solid #ddd; }
+    .hidden { display:none !important; }
+body, button, input, textarea, select {
+  font-family: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;}
+  </style>
+</head>
+<body>
+  <h1>교사용 감정 기록 웹앱</h1>
+
+  <!-- 교사 로그인 -->
+  <div id="teacherLogin" class="box">
+    <h2>교사용 로그인</h2>
+    <input id="pw" type="password" placeholder="비밀번호" />
+    <button onclick="loginTeacher()">입장</button>
+    <p id="loginMsg"></p>
+  </div>
+
+  <!-- 교사용 전용 화면 -->
+  <div id="teacherView" class="hidden">
+    <h2>학생 감정 기록 (교사 전용)</h2>
+
+    <!-- 기능4: 연속 나쁨 알림 -->
+    <div id="alerts"></div>
+
+    <!-- 기능2: 감정 변화 그래프 -->
+    <div class="box">
+      <label>학생 선택</label>
+      <select id="studentSelect" onchange="drawChart()"></select>
+      <canvas id="chart" height="200"></canvas>
+    </div>
+
+    <!-- 전체 기록 -->
+    <div class="box">
+      <h3>전체 기록</h3>
+      <div id="records"></div>
+    </div>
+
+    <button onclick="logoutTeacher()">로그아웃</button>
+  </div>
+
+  <script>
+    /* ===== 설정 ===== */
+    function getTeacherPassword(){ return localStorage.getItem('teacherPw') || '1234'; }
+
+    let chart = null;
+
+    /* ===== 로그인 ===== */
+    function loginTeacher(){
+      const pw = document.getElementById('pw').value;
+      if(pw === getTeacherPassword()){
+        document.getElementById('teacherLogin').classList.add('hidden');
+        document.getElementById('teacherView').classList.remove('hidden');
+        loadRecords(); loadStudents(); showAlerts();
+      } else {
+        document.getElementById('loginMsg').innerText = '비밀번호가 틀렸습니다.';
+      }
+    }
+
+    function logoutTeacher(){
+      document.getElementById('teacherView').classList.add('hidden');
+      document.getElementById('teacherLogin').classList.remove('hidden');
+    }
+
+    /* ===== 데이터 불러오기 (기능1) ===== */
+    function getData(){
+      return JSON.parse(localStorage.getItem('moodRecords') || '[]');
+    }
+
+    function loadRecords(){
+      const data = getData();
+      const box = document.getElementById('records'); box.innerHTML = '';
+      data.forEach(r=>{
+        const div = document.createElement('div'); div.className='record';
+        div.innerText = `${r.date} | ${r.name} | ${r.mood} | 이유: ${r.reason}`;
+        box.appendChild(div);
+      });
+    }
+
+    function loadStudents(){
+      const data = getData();
+      const names = [...new Set(data.map(r=>r.name))];
+      const sel = document.getElementById('studentSelect'); sel.innerHTML='';
+      names.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.innerText=n; sel.appendChild(o); });
+      if(names.length>0) drawChart();
+    }
+
+    /* ===== 기능2: 감정 변화 그래프 ===== */
+    const moodLabels = ["매우 좋음 😊", "좋음 🙂", "보통 😐", "나쁨 🙁", "매우 나쁨 😢"];
+    function drawChart(){
+      const name = document.getElementById('studentSelect').value;
+      const data = getData().filter(r=>r.name===name).sort((a,b)=>a.date.localeCompare(b.date));
+      const labels = data.map(r=>r.date);
+      const values = data.map(r=>4-r.moodIndex); // 좋음이 위로
+      if(chart) chart.destroy();
+      chart = new Chart(document.getElementById('chart'),{
+        type:'line',
+        data:{ labels, datasets:[{ label:'기분 변화', data:values, fill:false }]},
+        options:{ scales:{ y:{ ticks:{ callback:v=>moodLabels[4-v] }}}}
+      });
+    }
+
+    /* ===== 기능4: 연속 나쁨 알림 ===== */
+    function checkStreakAlert(name, data){
+      const list = data.filter(r=>r.name===name).sort((a,b)=>a.date.localeCompare(b.date));
+      let streak = 0;
+      for(let i=list.length-1;i>=0;i--){
+        if(list[i].moodIndex>=3){ // 나쁨, 매우 나쁨
+          if(i===list.length-1 || isPrevDay(list[i].date, list[i+1]?.date)) streak++;
+          else break;
+        } else break;
+      }
+      if(streak>=3) return `⚠ ${name} 학생이 ${streak}일 연속 기분이 좋지 않습니다.`;
+      return '';
+    }
+
+    function isPrevDay(d1, d2){
+      const a=new Date(d1), b=new Date(d2);
+      a.setDate(a.getDate()+1);
+      return a.toISOString().slice(0,10)===b.toISOString().slice(0,10);
+    }
+
+    function showAlerts(){
+      const data = getData();
+      const names = [...new Set(data.map(r=>r.name))];
+      const box = document.getElementById('alerts'); box.innerHTML='';
+      names.forEach(n=>{
+        const msg = checkStreakAlert(n, data);
+        if(msg){ const d=document.createElement('div'); d.className='alert'; d.innerText=msg; box.appendChild(d);}  
+      });
+    }
+  </script>
+</body>
+</html>
