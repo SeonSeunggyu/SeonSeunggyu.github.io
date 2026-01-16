@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>오늘의 감정</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <style>
+   body, button, input, textarea {font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; 800px; margin: auto; padding: 20px; }
+    h1, h2 { text-align: center; }
+    .box { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    #moods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .mood-btn { width:100%; height:70px; font-size:18px; border-radius:16px; border:none; background:#f0f0f0; transition:0.2s; cursor:pointer; }
+    .mood-btn:hover { transform: scale(1.05); }
+    .selected { background:#ffe08a; }
+    input, textarea { width:100%; padding:8px; margin-top:6px; border-radius:10px; border:1px solid #ddd; }
+    button { background:#4f7cff; color:white; border-radius:12px; border:none; font-weight:bold; padding:10px 16px; margin-top:10px; cursor:pointer; }
+    button:hover { background:#3d66d6; }
+    .alert { background:#ffe0e0; padding:10px; margin:10px 0; border:1px solid #ff8080; border-radius:12px; font-weight:bold; }
+  .mood-btn { color: #000 !important; }
+  .selected { color: #000 !important; }
+body, button, input, textarea, select {
+  font-family: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;}
+  </style>
+</head>
+<body>
+  <h1>오늘의 감정은 어떤가요?</h1>
+
+  <div class="box">
+    <p>오늘 날짜(인터넷 기준): <b id="todayLabel">불러오는 중...</b></p>
+
+    <label>이름</label>
+    <input id="name" placeholder="이름 입력" />
+    <small>처음 한 번만 입력하면 다음부터 자동으로 기억합니다.</small>
+
+    <p>오늘 기분을 골라주세요 (5단계)</p>
+    <div id="moods"></div>
+
+    <label>그 이유는?</label>
+    <textarea id="reason" rows="3"></textarea>
+
+    <button onclick="saveRecord()">저장</button>
+    <p id="msg"></p>
+  </div>
+
+  <script>
+    const moodLabels = ["매우 좋음 😊", "좋음 🙂", "보통 😐", "나쁨 🙁", "매우 나쁨 😢"];
+    let selectedMood = null;
+    let currentDate = null;
+
+    // 이름 기억
+    const savedName = localStorage.getItem('studentName');
+    if(savedName){ document.getElementById('name').value = savedName; }
+
+    // 기분 버튼 생성
+    const moodsDiv = document.getElementById("moods");
+    moodLabels.forEach((m, i) => {
+      const btn = document.createElement("button");
+      btn.className = "mood-btn";
+      btn.innerText = m;
+      btn.onclick = () => selectMood(i, btn);
+      moodsDiv.appendChild(btn);
+    });
+
+    function selectMood(i, btn) {
+      selectedMood = i;
+      document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    // 인터넷 날짜
+    async function loadInternetDate(){
+      try{
+        const res = await fetch('https://worldtimeapi.org/api/ip');
+        const data = await res.json();
+        currentDate = data.datetime.slice(0,10);
+        document.getElementById('todayLabel').innerText = currentDate;
+      }catch(e){
+        const d = new Date();
+        currentDate = d.toISOString().slice(0,10);
+        document.getElementById('todayLabel').innerText = currentDate + ' (로컬시간)';
+      }
+    }
+    loadInternetDate();
+
+    function alreadySubmittedToday(name){
+      const data = JSON.parse(localStorage.getItem("moodRecords") || "[]");
+      return data.some(r => r.name === name && r.date === currentDate);
+    }
+
+    function saveRecord() {
+      const name = document.getElementById("name").value.trim();
+      const reason = document.getElementById("reason").value.trim();
+      if (!name || selectedMood === null) {
+        document.getElementById("msg").innerText = "이름과 기분을 선택하세요.";
+        return;
+      }
+      if(!currentDate){
+        document.getElementById("msg").innerText = "날짜 불러오는 중";
+        return;
+      }
+      if(alreadySubmittedToday(name)){
+        document.getElementById("msg").innerText = "오늘은 이미 입력했습니다.";
+        return;
+      }
+
+      const data = JSON.parse(localStorage.getItem("moodRecords") || "[]");
+      const record = { name, moodIndex: selectedMood, mood: moodLabels[selectedMood], reason, date: currentDate };
+      data.push(record);
+      localStorage.setItem("moodRecords", JSON.stringify(data));
+      localStorage.setItem("studentName", name);
+
+      document.getElementById("msg").innerText = checkStreakAlert(name, data) || "저장되었습니다.";
+      document.getElementById("reason").value = "";
+      selectedMood = null;
+      document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+    }
+
+    // 3일 연속 나쁨 경고(학생에게도 표시)
+    function checkStreakAlert(name, data){
+      const list = data.filter(r=>r.name===name).sort((a,b)=>a.date.localeCompare(b.date));
+      let streak=0;
+      for(let i=list.length-1;i>=0;i--){
+        if(list[i].moodIndex>=3){
+          if(i===list.length-1 || isPrevDay(list[i].date, list[i+1]?.date)) streak++;
+          else break;
+        } else break;
+      }
+      if(streak>=3) return `⚠ ${streak}일 연속 기분이 좋지 않습니다.`;
+      return "";
+    }
+
+    function isPrevDay(d1, d2){
+      const a=new Date(d1), b=new Date(d2);
+      a.setDate(a.getDate()+1);
+      return a.toISOString().slice(0,10)===b.toISOString().slice(0,10);
+    }
+  </script>
+</body>
+</html>
